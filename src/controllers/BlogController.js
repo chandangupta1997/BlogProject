@@ -1,25 +1,124 @@
 const blogModel = require("../models/blogModel")
 const authorModel = require("../models/authorModel")
 
+const isValid = function(value) {
+    if(typeof value === 'undefined' || value === null) return false
+    if(typeof value === 'string' && value.trim().length === 0) return false
+    return true;
+}
+
+const isValidRequestBody = function(requestBody) {
+    return Object.keys(requestBody).length > 0
+}
+
+const isValidObjectId = function(objectId) {
+    return mongoose.Types.ObjectId.isValid(objectId)
+}
+
 const createBlog = async function (req, res) {
     try {
-        const data = req.body
-        const id = req.body.authorId
+        const requestBody = req.body;
 
-        if (!Object.keys(data).length > 0) return res.send({ error: "Please enter data" })
+        if(!isValidRequestBody(requestBody)) {
+            res.status(400).send({status: false, message: 'Invalid request parameters. Please provide blog details'})
+            return
+        }
 
-        const findAuthor = await authorModel.find({ _id: id })
+        // Extract params
+        const {title, body, authorId, tags, category, subcategory, isPublished} = requestBody;
+        
+        // Validation starts
+        if(!isValid(title)) {
+            res.status(400).send({status: false, message: 'Blog Title is required'})
+            return
+        }
 
-        if (!findAuthor.length > 0) return res.status(400).send("error : Please enter valid authorId")
+        if(!isValid(body)) {
+            res.status(400).send({status: false, message: 'Blog body is required'})
+            return
+        }
 
-        const createdBlog = await blogModel.create(data)
-        res.status(201).send({ Blog: createdBlog })
-    }
-    catch (err) {
-        console.log(err)
-        res.status(500).send({ msg: err.message })
+        if(!isValid(authorId)) {
+            res.status(400).send({status: false, message: 'Author id is required'})
+            return
+        }
+
+        if(!isValidObjectId(authorId)) {
+            res.status(400).send({status: false, message: `${authorId} is not a valid author id`})
+            return
+        }
+
+        if(!isValid(category)) {
+            res.status(400).send({status: false, message: 'Blog category is required'})
+            return
+        }
+
+        const author = await authorModel.findById(authorId);
+
+        if(!author) {
+            res.status(400).send({status: false, message: `Author does not exit`})
+            return
+        }
+        // Validation ends
+        
+        const blogData = {
+            title,
+            body,
+            authorId,
+            category,
+            isPublished: isPublished ? isPublished : false,
+            publishedAt: isPublished ? new Date() : null
+        }
+
+        if(tags) {
+            if(Array.isArray(tags)) {
+                blogData['tags'] = [...tags]
+            }
+            if(Object.prototype.toString.call(tags) === "[object String]") {
+                blogData['tags'] = [ tags ]
+            }
+        }
+
+        if(subcategory) {
+            if(Array.isArray(subcategory)) {
+                blogData['subcategory'] = [...subcategory]
+            }
+            if(Object.prototype.toString.call(subcategory) === "[object String]") {
+                blogData['subcategory'] = [ subcategory ]
+            }
+        }
+
+        const newBlog = await blogModel.create(blogData)
+        res.status(201).send({status: true, message: 'New blog created successfully', data: newBlog})
+    } catch (error) {
+        console.log(error)
+        res.status(500).send({status: false, message: error.message});
     }
 }
+
+
+
+
+
+// const createBlog = async function (req, res) {
+//     try {
+//         const data = req.body
+//         const id = req.body.authorId
+
+//         if (!Object.keys(data).length > 0) return res.send({ error: "Please enter data" })
+
+//         const findAuthor = await authorModel.find({ _id: id })
+
+//         if (!findAuthor.length > 0) return res.status(400).send("error : Please enter valid authorId")
+
+//         const createdBlog = await blogModel.create(data)
+//         res.status(201).send({ Blog: createdBlog })
+//     }
+//     catch (err) {
+//         console.log(err)
+//         res.status(500).send({ msg: err.message })
+//     }
+// }
 
 /*const getBlogs=async function(req,res){
 
