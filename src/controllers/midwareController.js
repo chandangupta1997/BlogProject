@@ -88,35 +88,62 @@ const Authentication = async function (req, res, next) {
 };*/
 
 
-const authorisation = async function (req, res, next) {
+// const authorisation = async function (req, res, next) {
+//   try {
+//       let token = req.headers["x-api-key"];
+//       let decodedtoken = jwt.verify(token, "secuiretyKeyToCheckToken")
+
+//       let blogId = req.params.blogId
+//       if (!blogId) blogId = req.query._id
+
+//       if (blogId) {
+//           let authorId = await blogModel.find({ _id: blogId }).select({ authorId: 1, _id: 0 })
+//           authorId = authorId.map(x => x.authorId)
+
+//           if (decodedtoken.authorId != authorId) return res.status(403).send({ status: false, msg: "You haven't right to perform this task" })
+//       }
+
+//       else {
+//           let authorId = req.query.authorId
+//           if ( !authorId )  return res.status(400).send({error : "Please, enter authorId or blogId"})
+//           if (decodedtoken.authorId != authorId) return res.status(403).send({ status: false, msg: "You haven't right to perform this task" })
+//       }
+//       next()
+//   }
+//   catch (error) {
+//       console.log(error)
+//       res.status(500).send({ msg: error.message })
+//   }
+// }
+
+
+
+const autherAuth = async (req, res, next) => {
   try {
-      let token = req.headers["x-api-key"];
-      let decodedtoken = jwt.verify(token, "secuiretyKeyToCheckToken")
-
-      let blogId = req.params.blogId
-      if (!blogId) blogId = req.query._id
-
-      if (blogId) {
-          let authorId = await blogModel.find({ _id: blogId }).select({ authorId: 1, _id: 0 })
-          authorId = authorId.map(x => x.authorId)
-
-          if (decodedtoken.authorId != authorId) return res.status(403).send({ status: false, msg: "You haven't right to perform this task" })
+      const token = req.header('x-api-key')
+      if(!token) {
+          res.status(403).send({status: false, message: `Missing authentication token in request`})
+          return;
       }
 
-      else {
-          let authorId = req.query.authorId
-          if ( !authorId )  return res.status(400).send({error : "Please, enter authorId or blogId"})
-          if (decodedtoken.authorId != authorId) return res.status(403).send({ status: false, msg: "You haven't right to perform this task" })
+      const decoded = await jwt.verify(token, 'PawanKanyal')
+
+      if(!decoded) {
+          res.status(403).send({status: false, message: `Invalid authentication token in request`})
+          return;
       }
+
+      req.authorId = decoded.authorId;
+
       next()
-  }
-  catch (error) {
-      console.log(error)
-      res.status(500).send({ msg: error.message })
+  } catch (error) {
+      console.error(`Error! ${error.message}`)
+      res.status(500).send({status: false, message: error.message})
   }
 }
 
+module.exports.autherAuth = autherAuth
 module.exports.loginAuthor = loginAuthor;
 module.exports.Authentication = Authentication;
-module.exports.Authorisation = Authorisation;
-module.exports.authorisation=authorisation
+//module.exports.Authorisation = Authorisation;
+//module.exports.authorisation=authorisation
